@@ -1,0 +1,16 @@
+package archetype.batch.dao;
+
+import java.util.Date;
+import java.util.List;
+
+import archetype.batch.bean.ConfigurationBean;
+
+/**
+ * @author Ernesto G
+ */
+public interface ConfigurationDAO {
+
+	List<ConfigurationBean> getConfiguration(String idAdquirente,Date ejecucion);
+
+	void logStep(Date fIni, Date fFin, String origen, Integer step, String status, String descripcion, Date fechaEjecucion,String parametros);
+}

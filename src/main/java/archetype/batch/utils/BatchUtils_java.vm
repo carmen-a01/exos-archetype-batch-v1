@@ -1,0 +1,140 @@
+package archetype.batch.utils;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.text.ParseException;
+import java.util.*;
+
+/**
+ * @author Ernesto G
+ */
+@Slf4j
+public class BatchUtils {
+	public static String REGEX_DATE_YYMMDD = "\\d{4}-\\d{2}-\\d{2}";
+
+	public static String validateString(String value) {
+		if(value == null) return null;
+		
+		String retVal = value.trim();
+		
+		if(retVal.isEmpty()) return null;
+		
+		return retVal;
+	}
+	public static boolean validateParms(String args[], Integer totalParms){
+		return args.length == totalParms + 1;
+	}
+
+	
+	public static boolean validateRegex(String args[], Integer parmNumber, String regex){
+		return args[parmNumber].matches(regex);
+	}
+
+	public static Object getParm(String args[], Integer parm, String parmName, String type, String format) throws ParseException {
+		switch (type){
+			case "String":
+				return args[parm];
+			case "Integer":
+				try {
+					return Integer.parseInt(args[parm]);
+				}catch (NumberFormatException ex){
+					log.error("Formato de parametro incorrecto: {} - Dato debe ser Entero", args[parm]);
+					throw ex;
+				}
+			case "Float":
+				try {
+					return Float.parseFloat(args[parm]);
+				}catch (NumberFormatException ex){
+					log.error("Formato de parametro incorrecto: {} - Dato debe ser Flotante", args[parm]);
+					throw ex;
+				}
+			case "Double":
+				try {
+					return Double.parseDouble(args[parm]);
+				}catch (NumberFormatException ex){
+					log.error("Formato de parametro incorrecto: {} - Dato debe ser Doble", args[parm]);
+					throw ex;
+				}
+			case "Date":
+				try {
+					return DateUtils.stringToDate(args[parm], format);
+				}catch (NumberFormatException | ParseException ex){
+					log.error("Formato de fecha incorrecto: {} - formato esperado: {}", args[parm], format);
+					throw ex;
+				}
+		}
+		return null;
+	}
+
+	public static Integer[] getSteps(String[] args, Integer parm, Integer totalSteps){
+		String in = args[parm];
+		in = in.toUpperCase(Locale.ROOT).replace("ALL", stepsToString(totalSteps));
+		String[] pasosStr = in.split(",");
+		Integer[] pasos = new Integer[pasosStr.length];
+		for (int i = 0; i < pasos.length; i++) {
+			pasos[i]= Integer.parseInt(pasosStr[i]);
+		}
+		return pasos;
+	}
+	public static boolean validateStepInRange(String[] args, Integer parm, Integer totalSteps){
+		String in = args[parm];
+		if(in.contains(",")){
+			String[] pasos = in.split(",");
+			for(String paso: pasos){
+				try{
+					int ps = Integer.parseInt(paso);
+					if(ps<1 || ps>totalSteps) {
+						log.error("La lista de pasos contiene mas de los esperados");
+						return false;
+					}
+				}catch (NumberFormatException ex){
+					log.error("Los pasos deben ser numericos");
+					return false;
+				}
+			}
+			if(pasos.length>totalSteps-1) {
+				log.error("Use ALL si desea ejecutar todos los pasos");
+				return false;
+			}
+			if(checkDuplicates(pasos)) {
+				log.error("La lista de pasos contiene duplicados");
+				return false;
+			}
+			return true;
+		}else{
+			if(in.equals("1") || in.equals("2") || in.toUpperCase(Locale.ROOT).equals("ALL"))
+				return true;
+			else
+				return false;
+
+		}
+	}
+	public static boolean checkDuplicates(String[] in){
+		for (int j=0;j<in.length;j++) {
+			for (int k=j+1;k<in.length;k++) {
+				if (in[k].equals(in[j])){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public static String stepsToString(Integer step){
+		StringBuilder stepStr = new StringBuilder();
+		String prefix = "";
+		for (int i = 1; i <= step; i++) {
+			stepStr.append(prefix).append(i);
+			prefix = ",";
+		}
+		return stepStr.toString();
+	}
+
+	public static List<HashMap<String, Object>> mapToHashMap(List<Map<String, Object>> in){
+		List<HashMap<String, Object>> out = new ArrayList<>();
+		for (Map row : in) {
+			out.add(new HashMap<String, Object>(row));
+		}
+		return out;
+	}
+}

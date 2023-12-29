@@ -1,0 +1,25 @@
+package archetype.batch.bean;
+
+import lombok.*;
+
+import java.io.Serializable;
+
+@Setter
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
+public class ConfigurationBean implements Serializable {
+	
+	private static final long serialVersionUID = 6388758003831572166L;
+	private String acquirerId;
+	private boolean active;
+	//ventas origen
+	private String salesOriginDbInfo;
+	//historico
+	private String historicDbInfo;
+	//comercio
+	private String commercesDbInfo;
+	//ventas Destino
+	private String salesDestinationDbInfo;
+}

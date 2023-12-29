@@ -1,0 +1,34 @@
+package archetype.batch.steps;
+
+import lombok.extern.slf4j.Slf4j;
+import archetype.batch.service.BussinessService;
+
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+
+/**
+ * @author EXOS TECH
+ */
+@Slf4j
+public class Step1Tasklet implements Tasklet,InitializingBean {
+
+    @Autowired
+    BussinessService bussinessService;
+    
+    @Override
+    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        bussinessService.executeStep1();
+        return RepeatStatus.FINISHED;
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception
+    {
+        //Method Empty, Only implementation for InitializingBean interface
+    }
+    
+}

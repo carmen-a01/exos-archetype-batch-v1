@@ -1,0 +1,54 @@
+package archetype.batch.bussiness.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import archetype.batch.bean.ConfigurationBean;
+import archetype.batch.bussiness.ObjectBussines;
+import archetype.batch.configuration.Environments;
+import archetype.batch.dao.ConfigurationDAO;
+import archetype.batch.dao.OriginDAO;
+import archetype.batch.service.impl.BussinessServiceImpl;
+import archetype.batch.utils.DatabaseUtils;
+import archetype.batch.utils.Utils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.stereotype.Component;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+
+/**
+ * @author Ernesto G
+ * Implementacion de logica de negocio
+ */
+@Slf4j
+@Component
+public class ObjectBussinesImpl implements ObjectBussines {
+
+	@Autowired
+	private ConfigurationDAO configurationDAO;
+
+	@Autowired
+	private OriginDAO origenDAO;
+
+	@Autowired
+	private Environments env;
+
+	@Autowired
+	DatabaseUtils dbUtils;
+
+	@Override
+	public void proccesSomeBussinesOperation(ConfigurationBean configuration) {
+		Date fechaInicial=new Date();
+		JdbcTemplate jdbcOrigen = dbUtils.getConnection(configuration.getSalesOriginDbInfo());
+		try {
+			configurationDAO.logStep(fechaInicial, new Date(), BussinessServiceImpl.originProccess, BussinessServiceImpl.currentStep, "OK","Inicio de step 1 - Eliminación de registros", BussinessServiceImpl.execDate, BussinessServiceImpl.execParms);
+			
+		} catch (Exception e) {
+			log.error("Error", e);
+			configurationDAO.logStep(fechaInicial, new Date(), BussinessServiceImpl.originProccess, BussinessServiceImpl.currentStep, "ERROR","Error "+e.getMessage(), BussinessServiceImpl.execDate, BussinessServiceImpl.execParms);
+			configurationDAO.logStep(fechaInicial, new Date(), BussinessServiceImpl.originProccess, BussinessServiceImpl.currentStep, "OK","Fin de step 1 - Eliminación de registros", BussinessServiceImpl.execDate, BussinessServiceImpl.execParms);
+		}
+	}
+}

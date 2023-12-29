@@ -1,0 +1,25 @@
+package archetype.batch.utils;
+
+import lombok.*;
+
+/**
+ * @author Ernesto G
+ */
+@Getter
+@ToString
+public enum BatchEndCodes {
+	OK_CODE (0, "Correcto"),
+    PARM_ERROR   (100, "Error en parametros de entrada"),
+    CONECTION_ERROR   (200, "Error en conección a base de datos"),
+    CONFIGURATION_ERROR   (300, "Error de configuración"),
+    DATA_PARSING_ERROR   (400, "Error de conversión de datos"),
+    UNDEFINED_ERROR   (500, "Error desconocido");
+
+	private Integer code;
+    private String description;
+
+	BatchEndCodes(Integer code, String description) {
+        this.code = code;
+        this.description = description;
+    }
+}

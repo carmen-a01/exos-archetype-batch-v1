@@ -1,0 +1,88 @@
+package archetype.batch.utils;
+
+import java.util.Locale;
+
+/**
+ * @author Ernesto G
+ */
+public class Utils {
+	private static final String FILTER_POSTGRESQL = "postgresql";
+	private static final String FILTER_SQLSERVER = "sqlserver";
+	private static final String FILTER_INFORMIX = "informix";
+	private static final String FILTER_MYSQL = "mysql";
+
+	private static final String DRIVER_POSTGRESQL = "org.postgresql.Driver";
+	private static final String DRIVER_SQLSERVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+	private static final String DRIVER_INFORMIX = "com.informix.jdbc.IfxDriver";
+	private static final String DRIVER_MYSQL = "com.mysql.cj.jdbc.Driver";
+
+	public static String validateString(String value) {
+		if(value == null) return null;
+		
+		String retVal = value.trim();
+		
+		if(retVal.isEmpty()) return null;
+		
+		return retVal;
+	}
+	public static String removeLastChar(String s)
+	{
+		return s.substring(0, s.length() - 1);
+	}
+	public static String getDataBaseDriver(String url) {
+		if (url.contains(FILTER_POSTGRESQL)) {
+			return DRIVER_POSTGRESQL;
+		} else if (url.contains(FILTER_SQLSERVER)) {
+			return DRIVER_SQLSERVER;
+		} else if (url.contains(FILTER_INFORMIX)) {
+			return DRIVER_INFORMIX;
+		} else if (url.contains(FILTER_MYSQL)) {
+			return DRIVER_MYSQL;
+		}
+		return "";
+	}
+	public static Integer[] getPasos(String in){
+		in = in.toUpperCase(Locale.ROOT).replace("ALL","1,2,3,4");
+		String[] pasosStr = in.split(",");
+		Integer[] pasos = new Integer[pasosStr.length];
+		for (int i = 0; i < pasos.length; i++) {
+			pasos[i]= Integer.parseInt(pasosStr[i]);
+		}
+		return pasos;
+	}
+	public static boolean validaPasosIn(String in){
+		if(in.contains(",")){
+			String[] pasos = in.split(",");
+			for(String paso: pasos){
+				try{
+					int ps = Integer.parseInt(paso);
+					if(ps<1 || ps>2)
+						return false;
+				}catch (NumberFormatException ex){
+					return false;
+				}
+			}
+			if(pasos.length>3)
+				return false;
+			if(checkDuplicates(pasos))
+				return false;
+			return true;
+		}else{
+			if(in.equals("1") || in.equals("2") || in.equals("3") || in.equals("4") || in.toUpperCase(Locale.ROOT).equals("ALL"))
+				return true;
+			else
+				return false;
+
+		}
+	}
+	public static boolean checkDuplicates(String[] in){
+		for (int j=0;j<in.length;j++) {
+			for (int k=j+1;k<in.length;k++) {
+				if (in[k].equals(in[j])){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+}

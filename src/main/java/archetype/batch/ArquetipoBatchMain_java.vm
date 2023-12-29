@@ -1,0 +1,91 @@
+package archetype.batch;
+
+import lombok.extern.slf4j.Slf4j;
+import archetype.batch.configuration.GitBranchProvider;
+import archetype.batch.service.BussinessService;
+import archetype.batch.service.impl.BussinessServiceImpl;
+import archetype.batch.utils.BatchEndCodes;
+import archetype.batch.utils.BatchUtils;
+import archetype.batch.utils.Utils;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import java.util.Date;
+import com.github.lalyos.jfiglet.FigletFont;
+
+@SpringBootApplication
+@Slf4j
+public class ArquetipoBatchMain {
+    private static final int PARAM_TOTAL = 4;
+
+    public static void main(String[] args) throws IOException {
+        //Se comenta debido a que aun no hay repositorio para este arquetipo
+        //String branchName = GitBranchProvider.getCurrentBranch();
+        String branchName = "master";
+        //FigletFont - Libreria para texto ascii
+        log.info("\n" + FigletFont.convertOneLine("cs-mx-batch-arquetipo"));
+        log.info("[Setting branch name: {} to SystemProperties...]", branchName);
+        System.setProperty("branchName", branchName);
+
+        if(!BatchUtils.validateParms(args, PARAM_TOTAL)) {
+            parmsLog(0);
+            log.error(BatchEndCodes.PARM_ERROR.getDescription());
+			System.exit(BatchEndCodes.PARM_ERROR.getCode());
+        }
+        try {
+          
+            BussinessServiceImpl.acquirerId = (String)BatchUtils.getParm(args, 1, "idAquirente", "String", null);
+            if(!BatchUtils.validateRegex(args, 2, BatchUtils.REGEX_DATE_YYMMDD)){
+                log.error("Rectifique fecha Inicio: yyyy-MM-dd");
+                log.error(BatchEndCodes.PARM_ERROR.getDescription());
+                System.exit(BatchEndCodes.PARM_ERROR.getCode());
+            }
+            BussinessServiceImpl.initDate = (Date)BatchUtils.getParm(args, 2, "Fecha Inicial", "Date", "yyyy-MM-dd"); 
+            if(!BatchUtils.validateRegex(args, 3, BatchUtils.REGEX_DATE_YYMMDD)){
+                log.error("Rectifique fecha Fin: yyyy-MM-dd");
+                log.error(BatchEndCodes.PARM_ERROR.getDescription());
+                System.exit(BatchEndCodes.PARM_ERROR.getCode());
+            }
+            //BussinessServiceImpl.endDate = new SimpleDateFormat("yyyy-MM-dd").parse(args[3]);
+            BussinessServiceImpl.endDate = (Date)BatchUtils.getParm(args, 3, "Fecha Inicial", "Date", "yyyy-MM-dd"); 
+
+            if (Utils.validaPasosIn(args[4])) {
+                BussinessServiceImpl.steps = Utils.getPasos(args[4]);
+            } else {
+                log.error("2.- step (1, 2,  ALL)");
+                log.error(BatchEndCodes.PARM_ERROR.getDescription());
+                System.exit(BatchEndCodes.PARM_ERROR.getCode());
+            }
+            BussinessServiceImpl.execParms =
+            "id_adquirente:"+BussinessServiceImpl.acquirerId
+            +"\nfecha_inicial:"+args[2]
+            +"\nfecha_final:"+args[3]
+            +"\n"+(BussinessServiceImpl.steps.length>1?"ALL":BussinessServiceImpl.steps[0]);
+
+          
+        } catch (ParseException e) {
+            parmsLog(0);
+            log.error(BatchEndCodes.DATA_PARSING_ERROR.getDescription());
+            System.exit(BatchEndCodes.DATA_PARSING_ERROR.getCode());
+        }
+
+
+        System.exit(SpringApplication.exit(SpringApplication.run(ArquetipoBatchMain.class, args)));
+    }
+    public static void parmsLog(int paso){
+        log.error("Rectifique Parametros");
+        switch (paso){
+            case 0:
+                log.info("1: id adquirente <cadena>");
+                log.info("2: fehca inicio <yyyy-MM-dd>");
+                log.info("3: fecha final <yyyy-MM-dd>");
+                log.info("4: step <1,2 o ALL>");
+                break;
+        }
+
+    }
+}

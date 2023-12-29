@@ -1,0 +1,28 @@
+package archetype.batch.configuration;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+/**
+ * @author Ernesto G
+ */
+@Getter
+@Setter
+@Component
+public class Environments {
+
+	@Value("${spring.encripted-psw}")
+	private Boolean encriptedPsw;
+
+	@Value("${spring.decrypt-key}")
+	private String decryptKey;
+
+	@Value("${spring.datasource.config-table}")
+	private String configTable;
+
+	@Value("${spring.datasource.log-table}")
+	private String logTable;
+	
+}

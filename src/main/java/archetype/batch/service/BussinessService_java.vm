@@ -1,0 +1,13 @@
+package archetype.batch.service;
+
+import java.text.ParseException;
+
+/**
+ * @author Ernesto G
+ */
+public interface BussinessService {
+
+	void getConfiguration();
+
+	void executeStep1() throws ParseException;
+}

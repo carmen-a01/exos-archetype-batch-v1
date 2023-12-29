@@ -1,0 +1,40 @@
+package archetype.batch.configuration;
+
+import com.zaxxer.hikari.HikariDataSource;
+
+import archetype.batch.dao.ConfigurationDAO;
+import archetype.batch.dao.impl.ConfigurationDAOImpl;
+import archetype.batch.service.BussinessService;
+import archetype.batch.service.impl.BussinessServiceImpl;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import javax.sql.DataSource;
+
+@Configuration
+public class DataSourceConfiguration {
+    @Bean(name = "dataSource")
+    @ConfigurationProperties(prefix = "spring.datasource")
+    public HikariDataSource dataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean(name = "jdbcTemplate")
+    public JdbcTemplate dataSourceJdbcTemplate(@Qualifier("dataSource") DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+    @Bean
+    public BussinessService bussinessService() {
+        return new BussinessServiceImpl();
+    }
+
+    @Bean
+    public ConfigurationDAO configurationDAO() {
+        return new ConfigurationDAOImpl();
+    }
+}

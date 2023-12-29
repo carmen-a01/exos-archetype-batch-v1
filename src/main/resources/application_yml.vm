@@ -1,0 +1,22 @@
+logging:
+  file:
+    name: /path/to/log.log
+log4j:
+  logger:
+    org:
+      springframework:
+        jdbc:
+          core: TRACE
+spring:
+  datasource:
+    driver-class-name: 
+    jdbcUrl: 
+    username: 
+    password: 
+    config-table: 
+    log-table: 
+  encripted-psw: false
+  decrypt-key: 
+  batch:
+    jdbc:
+      initialize-schema: never

@@ -1,0 +1,307 @@
+package archetype.batch.utils;
+
+import lombok.extern.slf4j.Slf4j;
+import archetype.batch.configuration.Environments;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+/**
+ * @author Ernesto G
+ */
+@Component
+@Slf4j
+public class DatabaseUtils {
+	@Autowired
+	private Environments env;
+
+	public JdbcTemplate getConnection(String dbConfig) {
+		HashMap<String, String> dbConectionData = null;
+        try {
+            dbConectionData = new ObjectMapper().readValue(dbConfig, HashMap.class);
+        } catch (IOException e) {
+            log.error("Valide configuracion de base de datos");
+			log.debug(e.getLocalizedMessage());
+			log.error(BatchEndCodes.CONFIGURATION_ERROR.getDescription());
+			System.exit(BatchEndCodes.CONFIGURATION_ERROR.getCode());
+        }
+		
+		String dbUrl = dbConectionData.get("url");
+		String dbUsername = dbConectionData.get("usuario");
+		String dbDriver = Utils.getDataBaseDriver(dbConectionData.get("url"));
+		String dbPassword = dbConectionData.get("password");
+
+		DriverManagerDataSource dataSourceOrigen = new DriverManagerDataSource();
+		dataSourceOrigen.setDriverClassName(dbDriver);
+		dataSourceOrigen.setUrl(dbUrl);
+		dataSourceOrigen.setUsername(dbUsername);
+		try {
+            if(env.getEncriptedPsw()){
+			    dataSourceOrigen.setPassword(AESUtil.decrypt(dbPassword, env.getDecryptKey()));
+            }else{
+                dataSourceOrigen.setPassword(dbPassword);
+            }
+		} catch (Exception e) {
+			log.error("Error al desencriptar Password de BD: {}", e.getMessage());
+			log.error(BatchEndCodes.CONECTION_ERROR.getDescription());
+			System.exit(BatchEndCodes.CONECTION_ERROR.getCode());
+		}
+		return new JdbcTemplate(dataSourceOrigen);
+	}
+	public String getTableName(String dbConfig, String table) {
+		HashMap<String, String> dbConectionData = null;
+        try {
+            dbConectionData = new ObjectMapper().readValue(dbConfig, HashMap.class);
+        } catch (IOException e) {
+            log.error("Valide configuracion de base de datos");
+			log.debug(e.getLocalizedMessage());
+			log.error(BatchEndCodes.CONFIGURATION_ERROR.getDescription());
+			System.exit(BatchEndCodes.CONFIGURATION_ERROR.getCode());
+        }
+		
+		return dbConectionData.get(table);
+	}
+
+	public String getWhereQuery(LinkedHashMap<String, Object> where) {
+        // Armamos la lista de where
+        StringBuilder camposWhere = new StringBuilder();
+        String prefix = "";
+        for (String key : where.keySet()) {
+            if (key.startsWith(">=")) {
+                camposWhere.append(prefix).append(key.replace(">=", "")).append(" >= ? ");
+            } else {
+                if (key.startsWith("<=")) {
+                    camposWhere.append(prefix).append(key.replace("<=", "")).append(" <= ? ");
+                } else {
+                    if (key.startsWith(">")) {
+                        camposWhere.append(prefix).append(key.replace(">", "")).append(" > ? ");
+                    } else {
+                        if (key.startsWith("<")) {
+                            camposWhere.append(prefix).append(key.replace("<", "")).append(" < ? ");
+                        } else {
+                            if (key.startsWith("!")) {
+                                camposWhere.append(prefix).append(key.replace("!", "")).append(" <> ? ");
+                            } else {
+                                camposWhere.append(prefix).append(key).append(" = ? ");
+                            }
+                        }
+                    }
+                }
+            }
+            prefix = "AND ";
+        }
+        return camposWhere.toString();
+    }
+
+    public String getWhereSet(HashMap<String, Object> where) {
+        // Armamos la lista de where
+        StringBuilder camposWhere = new StringBuilder();
+        String prefix = "";
+        for (String key : where.keySet()) {
+            if (key.startsWith(">=")) {
+                camposWhere.append(prefix).append(key.replace(">=", "")).append(" >= ? ");
+            } else {
+                if (key.startsWith("<=")) {
+                    camposWhere.append(prefix).append(key.replace("<=", "")).append(" <= ? ");
+                } else {
+                    if (key.startsWith(">")) {
+                        camposWhere.append(prefix).append(key.replace(">", "")).append(" > ? ");
+                    } else {
+                        if (key.startsWith("<")) {
+                            camposWhere.append(prefix).append(key.replace("<", "")).append(" < ? ");
+                        } else {
+                            if (key.startsWith("!")) {
+                                camposWhere.append(prefix).append(key.replace("!", "")).append(" <> ? ");
+                            } else {
+                                camposWhere.append(prefix).append(key).append(" = ? ");
+                            }
+                        }
+                    }
+                }
+            }
+            prefix = ", ";
+        }
+        return camposWhere.toString();
+    }
+
+    public Object[] getWhereVariables(HashMap<String, Object> paramBucket, HashMap<String, Object> where) {
+        Object[] variables = new Object[where.size()];
+        // Armamos la lista de where
+        String prefix = "";
+        int i = 0;
+        for (String key : where.keySet()) {
+            if (where.get(key).getClass().equals(String.class) && where.get(key).toString().startsWith(":")) {
+                if (paramBucket.get(where.get(key).toString().replace(":", "")) != null) {
+                    variables[i] = paramBucket.get(where.get(key).toString().replace(":", ""));
+                } else {
+                    throw new RuntimeException(
+                            "Campo " + where.get(key).toString() + " no localizado, rectifique criterios");
+                }
+            } else {
+                if (where.get(key).toString().contains(",")) {
+                    String[] convert = where.get(key).toString().split(",");
+
+                    switch (convert[0]) {
+                        case "timestamp":
+                            if (convert.length > 2) {
+                                if (convert[2] != null && convert[1].length() == 4
+                                        && paramBucket.get(convert[2]) != null
+                                        && paramBucket.get(convert[2]).toString().length() == 4) {
+                                    String thisYear = new SimpleDateFormat("yyyy").format(new Date());
+                                    paramBucket.replace(convert[2], thisYear + paramBucket.get(convert[2]).toString());
+                                    convert[1] = "yyyy" + convert[1];
+                                }
+                                variables[i] = paramBucket.get(convert[2]) != null
+                                        ? DateUtils.convertStringToTimestamp(paramBucket.get(convert[2]).toString(), convert[1])
+                                        : null;
+                            } else {
+                                variables[i] = paramBucket.get(convert[1]) != null
+                                        ? DateUtils.convertStringToTimestamp(paramBucket.get(convert[1]).toString())
+                                        : null;
+                            }
+                            break;
+                        case "float":
+                            variables[i] = paramBucket.get(convert[1]) != null
+                                    ? Float.parseFloat(paramBucket.get(convert[1]).toString().trim()) / 100
+                                    : 0.0;
+
+                            break;
+                        case "double":
+                            variables[i] = paramBucket.get(convert[1]) != null
+                                    ? Double.parseDouble(paramBucket.get(convert[1]).toString().trim())
+                                    : 0.0;
+
+                            break;
+                        case "int":
+                            variables[i] = paramBucket.get(convert[1]) != null
+                                    ? Integer.parseInt(paramBucket.get(convert[1]).toString().trim())
+                                    : 0;
+                            break;
+
+                        case "string":
+                            variables[i] = paramBucket.get(convert[1]) != null
+                                    ? paramBucket.get(convert[1]).toString().trim()
+                                    : "";
+                            break;
+
+                    }
+
+                } else {
+                    variables[i] = where.get(key);
+                }
+            }
+            i++;
+        }
+        return variables;
+    }
+
+	public Object[] getInsertValues(HashMap<String, Object> paramBucket, HashMap<String, Object> fields, HashMap<String, Object> from) {
+        Object[] variables = new Object[fields.size()];
+        // Armamos la lista de where
+        String prefix = "";
+        int i = 0;
+        for (String key : fields.keySet()) {
+            if (fields.get(key).getClass().equals(String.class) && fields.get(key).toString().startsWith(":")) {
+                variables[i] = paramBucket.get(fields.get(key).toString().replace(":", ""));
+            } else {
+                if (fields.get(key).toString().contains(",")) {
+                    String[] convert = fields.get(key).toString().split(",");
+                    log.info("data: {} - {}", Arrays.asList(convert), from.get(convert[1]));
+
+                    switch (convert[0]) {
+                        case "timestamp":
+                            if (convert.length == 2) {
+                                variables[i] = from.get(convert[1]) != null
+                                        ? DateUtils.convertStringToTimestamp(from.get(convert[1]).toString())
+                                        : null;
+
+                            } else {
+                                if (convert[2] != null && convert[1].length() == 4 && from.get(convert[2]) != null
+                                        && from.get(convert[2]).toString().length() == 4) {
+                                    String thisYear = new SimpleDateFormat("yyyy").format(new Date());
+                                    from.replace(convert[2], thisYear + from.get(convert[2]).toString());
+                                    convert[1] = "yyyy" + convert[1];
+                                }
+                                variables[i] = from.get(convert[2]) != null
+                                        ? DateUtils.convertStringToTimestamp(from.get(convert[2]).toString(), convert[1])
+                                        : null;
+                            }
+                            break;
+                        case "float":
+                            variables[i] = from.get(convert[1]) != null
+                                    ? Float.parseFloat(from.get(convert[1]).toString().trim()) / 100
+                                    : 0.0;
+
+                            break;
+                        case "double":
+                            variables[i] = from.get(convert[1]) != null
+                                    ? Double.parseDouble(from.get(convert[1]).toString().trim())
+                                    : 0.0;
+
+                            break;
+                        case "int":
+                            // log.info("clase: {}",from.get(convert[1]).getClass());
+                            if (from.get(convert[1]).getClass().equals(Double.class)) {
+                                Double val = (Double) from.get(convert[1]);
+                                variables[i] = val.intValue();
+                            } else {
+                                variables[i] = from.get(convert[1]) != null
+                                        ? Integer.valueOf(from.get(convert[1]).toString().trim())
+                                        : 0;
+                            }
+                            break;
+
+                        case "string":
+                            variables[i] = from.get(convert[1]) != null ? from.get(convert[1]).toString().trim() : "";
+
+                            break;
+
+                        case "int_fijo":
+                            variables[i] = Integer.parseInt(convert[1]);
+
+                            break;
+
+                        case "string_fijo":
+                            variables[i] = convert[1];
+
+                            break;
+
+                        case "substring":
+                            String[] parts = convert[1].split("\\|");
+                            Integer inicio = Integer.parseInt(parts[1]);
+                            Integer fin = Integer.parseInt(parts[2]);
+                            if (from.get(parts[0]) != null && parts.length == 3
+                                    && from.get(parts[0]).toString().length() > (inicio + fin)) {
+                                variables[i] = from.get(parts[0]).toString().substring(inicio, fin);
+                            } else {
+                                log.error("No es posible aplicar regla substring: {}", convert[1]);
+                            }
+
+                            break;
+
+                    }
+
+                } else {
+                    variables[i] = from.get(fields.get(key));
+                }
+
+            }
+            if (from.containsKey(key)) {
+                from.replace(key, variables[i]);
+            } else {
+                from.put(key, variables[i]);
+            }
+            i++;
+        }
+        return variables;
+    }
+}

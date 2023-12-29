@@ -1,0 +1,15 @@
+package archetype.batch.bussiness;
+
+import org.springframework.transaction.annotation.Transactional;
+
+import archetype.batch.bean.ConfigurationBean;
+
+import java.text.ParseException;
+
+/**
+ * @author Ernesto G
+ */
+public interface ObjectBussines {
+    @Transactional
+    void proccesSomeBussinesOperation(ConfigurationBean configuration) throws ParseException;
+}

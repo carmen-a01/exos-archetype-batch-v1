@@ -1,0 +1,17 @@
+package archetype.batch.bean;
+
+import lombok.*;
+
+import java.io.Serializable;
+
+@Setter
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
+public class ErrorCode implements Serializable {
+	
+	private static final long serialVersionUID = 6388758003831572166L;
+	private Integer code;
+	private String description;
+}

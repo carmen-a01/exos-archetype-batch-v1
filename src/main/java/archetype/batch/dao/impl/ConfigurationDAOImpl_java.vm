@@ -1,0 +1,97 @@
+package archetype.batch.dao.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import archetype.batch.bean.ConfigurationBean;
+import archetype.batch.configuration.Environments;
+import archetype.batch.dao.ConfigurationDAO;
+import archetype.batch.service.impl.BussinessServiceImpl;
+import archetype.batch.utils.BatchEndCodes;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import org.springframework.stereotype.Repository;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * @author Ernesto G
+ */
+@Repository
+@Slf4j
+public class ConfigurationDAOImpl implements ConfigurationDAO {
+
+	@Autowired(required = true)
+	@Qualifier("jdbcTemplate")
+	private JdbcTemplate jdbcTemplate;
+	
+	@Autowired
+	Environments env;
+
+	@Override
+	public List<ConfigurationBean> getConfiguration(String acquirerId, Date execDate) {
+		
+		Date inicio = new Date();
+		List<ConfigurationBean> list = new ArrayList<>();
+		String sql = "SELECT * FROM " + env.getConfigTable() + " WHERE id_adquirente = ? AND activo = ?";
+		/*
+		 * Se espera que solo exista un campo en bd para la configuracion de la base de datos con la siguiente estructura
+		 * {
+		 * 		'url': 'postgresql://127.0.0.1:5432/mydb',
+		 * 		'username': 'myuser',
+		 *		'password': '8)sSDD"/55SH_=909'  <- Encriptado en AES (con llave en yml) 
+		 *		'tabla_ventas': 'ventas.h_historico_ventas'  <- Agregando datos propios del batch
+		 * }
+		 */
+		log.info("Get configuration :: {} ", sql);
+		try {
+			list = this.jdbcTemplate.query(sql,
+					(rs, rowNum) -> {
+							return new ConfigurationBean(
+									acquirerId,
+									true,
+									rs.getString("origen_database_ventas"),
+									rs.getString("origen_database_historico_cobro"),
+									rs.getString("origen_database_comercios"),
+									rs.getString("destino_database_ventas")
+							);
+					}, acquirerId, true);
+			this.logStep(inicio,new Date(),BussinessServiceImpl.originProccess,0,"Ok","Configuraciones obtenidas: "+list.size(), execDate,"id_adquirente: "+acquirerId);
+		} catch (DataAccessException e) {
+			this.logStep(inicio,new Date(),BussinessServiceImpl.originProccess,0,"Error","Ocurrio un error al obtener configuraciones", execDate,"id_adquirente: "+acquirerId);
+			log.error("Get configuration :: Error when obtaining configuration for acquirer {}, error: {} ", e.getCause());
+			log.error(BatchEndCodes.CONECTION_ERROR.getDescription());
+			System.exit(BatchEndCodes.CONECTION_ERROR.getCode());
+		}
+		log.info("Get configuration :: {} configurations found for acquirer {}", list.size(), acquirerId);
+		return list;
+	}
+
+	@Override
+	public void logStep(Date startDate, Date endDate, String originProccess, Integer step, String status, String stepDescription, Date execDate,String parmList) {
+		try{
+
+			StringBuilder sqlQueryPush = new StringBuilder("INSERT INTO " + env.getLogTable() + "( ")
+					.append("fh_proceso_inicial,")
+					.append("fh_proceso_final,")
+					.append("nombre_proceso_batch,")
+					.append("step,")
+					.append("estatus,")
+					.append("descripcion_actividad,")
+					.append("fh_sistema,")
+					.append("parametros_ejecucion)")
+					.append(" VALUES ")
+					.append(" (?, ?, ?, ?, ?, ?, ?, ?)");
+
+			int retVal = this.jdbcTemplate.update(sqlQueryPush.toString(), startDate, endDate, originProccess, step, status, stepDescription.length()>1000?stepDescription.substring(0, 1000):stepDescription, execDate,parmList.length()>250?parmList.substring(0,250):parmList);
+		}catch (DataAccessException e){
+			log.error("Error al guardar registro: {}", e.getCause().getMessage());
+			log.error(BatchEndCodes.CONECTION_ERROR.getDescription());
+			System.exit(BatchEndCodes.CONECTION_ERROR.getCode());
+		}
+	}
+}

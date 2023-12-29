@@ -1,0 +1,66 @@
+package archetype.batch.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import archetype.batch.bean.ConfigurationBean;
+import archetype.batch.bussiness.ObjectBussines;
+import archetype.batch.dao.ConfigurationDAO;
+import archetype.batch.service.BussinessService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.github.lalyos.jfiglet.FigletFont;
+
+import java.text.ParseException;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * @author Ernesto G
+ */
+@Slf4j
+@Service
+public class BussinessServiceImpl implements BussinessService {
+
+	
+	public static String acquirerId = null;
+	public static Date initDate = null;
+	public static Date endDate = null;
+	public static String execParms = null;
+	public static String originProccess = "batch_arquetipo";
+	public static Integer steps[] = null;
+	public static Integer currentStep = null;
+	public static Date execDate = new Date();
+	private List<ConfigurationBean> configurationList = null;
+
+	@Autowired
+	ConfigurationDAO configurationDAO;
+
+	@Autowired
+	ObjectBussines salesBusiness;
+
+	@Override
+	public void getConfiguration() {
+		log.info("\n" + FigletFont.convertOneLine("Configuración"));
+		Date inicioPaso = new Date();
+		configurationDAO.logStep(inicioPaso,new Date(),this.originProccess,0,"Ok","Inicia proceso batch",execDate,this.execParms);
+		log.info("Get configuration for acquirer {}", acquirerId);
+		this.configurationList = this.configurationDAO.getConfiguration(acquirerId, execDate);
+	}
+
+	@Override
+	public void executeStep1() throws ParseException {
+		this.currentStep = 1;
+		if (Arrays.asList(this.steps).contains(currentStep)) {
+            if (this.configurationList != null && !configurationList.isEmpty()) {
+                for (ConfigurationBean configuration : configurationList) {
+					this.salesBusiness.proccesSomeBussinesOperation(configuration);
+                }
+                
+            }
+        }else{
+            log.info("Paso no elegible para ejecución");
+        }
+		
+	}
+}

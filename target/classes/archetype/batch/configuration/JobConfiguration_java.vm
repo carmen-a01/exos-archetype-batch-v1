@@ -1,0 +1,53 @@
+package archetype.batch.configuration;
+
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.*;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import archetype.batch.steps.GetConfigurationTasklet;
+import archetype.batch.steps.Step1Tasklet;
+
+@Configuration
+@EnableBatchProcessing
+@EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class})
+public class JobConfiguration {
+    @Autowired
+    public JobBuilderFactory jobBuilderFactory;
+    @Autowired
+    public StepBuilderFactory stepBuilderFactory;
+
+
+    @Bean
+    public Job notification() {
+        return jobBuilderFactory.get("arquetipo")
+                .start(this.getConfiguration())
+                .next(this.Step1())
+                .incrementer(new RunIdIncrementer()).build();
+    }
+
+    @Bean
+    public Step getConfiguration() {
+        return this.stepBuilderFactory.get("getConfiguration").tasklet(getConfigurationTasklet()).build();
+    }
+
+    @Bean
+    public GetConfigurationTasklet getConfigurationTasklet() {
+        return new GetConfigurationTasklet();
+    }
+
+    @Bean
+    public Step Step1() {
+        return this.stepBuilderFactory.get("step1Tasklet").tasklet(step1Tasklet()).build();
+    }
+
+    @Bean
+    public Step1Tasklet step1Tasklet() {
+        return new Step1Tasklet();
+    }
+}
